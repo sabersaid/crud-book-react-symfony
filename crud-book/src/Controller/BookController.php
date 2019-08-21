@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
+use Symfony\Component\HttpFoundation\JsonResponse;
 class BookController extends ApiController
 {
     /**
@@ -18,42 +19,82 @@ class BookController extends ApiController
         return $this->respond($books);
     }
     /**
-    * @Route("/books", methods="POST")
+    * @Route("/createbook", methods="POST")
     */
     public function create(Request $request, BookRepository $bookRepository, EntityManagerInterface $em)
     {
-      
-        $request = $this->transformJsonBody($request);
-        if (! $request) {
-            return $this->respondValidationError('Please provide a valid request!');
-        }
-        // validate the title
-        if (! $request->get('title')) {
-            return $this->respondValidationError('Please provide a title!');
-        }
+		$formdata = json_decode($request->getContent());
+		
         // persist the new book
         $book = new Book;
-        $book->setTitle($request->get('title'));
-        $book->setCount(0);
+        $book->setName($formdata->name);
+        $book->setIsbn($formdata->isbn);
+		$book->setPrice($formdata->price);
+		$book->setAvailability($formdata->availability);
+		$book->setAuthor($formdata->author);
         $em->persist($book);
         $em->flush();
-        return $this->respondCreated($bookRepository->transform($book));
-    }
-    /**
-    * @Route("/books/{id}/count", methods="POST")
-    */
-    public function increaseCount($id, EntityManagerInterface $em, BookRepository $bookRepository)
-    {
         
-        $book = $bookRepository->find($id);
-        if (! $book) {
-            return $this->respondNotFound();
-        }
-        $book->setCount($book->getCount() + 1);
+		
+		$response = array('message' => 'Book created successfully!');
+		return new JsonResponse ($response);
+    }
+	
+	    /**
+    * @Route("/editbook", methods="POST")
+    */
+    public function edit(Request $request, BookRepository $bookRepository, EntityManagerInterface $em)
+    {
+		$formdata = json_decode($request->getContent());
+		$book = $bookRepository->find($formdata->id);
+		
+        // persist the new book
+        $book->setName($formdata->name);
+        $book->setIsbn($formdata->isbn);
+		$book->setPrice($formdata->price);
+		$book->setAvailability($formdata->availability);
+		$book->setAuthor($formdata->author);
         $em->persist($book);
         $em->flush();
-        return $this->respond([
-            'count' => $book->getCount()
-        ]);
+        
+		
+		$response = array('message' => 'Book created successfully!');
+		return new JsonResponse ($response);
+    }
+ 
+		
+    /**
+     * @Route("/book/delete", name="book_delete")
+     */
+    public function deleteAction(Request $request, BookRepository $bookRepository, EntityManagerInterface $em)
+    {
+		//return new JsonResponse($request->get('bookId'));
+
+	
+        $book = $bookRepository->find($request->get('bookId'));
+        $em->remove($book);
+        $em->flush();
+		
+		$response = array('message' => 'Book deleted successfully!');
+		return new JsonResponse ($response);
+        
+        
+    }
+	
+	 /**
+     * @Route("/book/getbook", name="book_get")
+     */
+    public function getBookAction(Request $request, BookRepository $bookRepository, EntityManagerInterface $em)
+    {
+		//return new JsonResponse($request->get('bookId'));
+
+	
+        $book = $bookRepository->find($request->get('bookId'));
+		$book = $bookRepository->transform($book);
+
+		
+		return new JsonResponse ($book);
+        
+        
     }
 }
